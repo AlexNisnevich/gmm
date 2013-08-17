@@ -1,5 +1,5 @@
 (ns gmm.core
-  (:use [incanter.core]))
+  (:use [incanter core stats]))
 
 (defn gaussian
   ; computes 2-dimensional gaussian pdf (as function of point (2-vector))
@@ -81,23 +81,22 @@
      covars
      coeffs]))
 
-(def points [[[0 0]] [[1 1]] [[2 2]]])
-(def means [[[2 5]] [[-1 -2]]])
-(def covariances [(matrix [[1 0] [0 1]]) (matrix [[1 0] [0 1]])])
-(def coeffs [1 1])
-
-; (defn expm
-;   ; computes matrix exponential using JBLAS
-;   ; (converts to and from JBLAS representation)
-;   [oldMat]
-;   (let
-;     [newMat
-;       (DoubleMatrix.
-;         (java.util.ArrayList.
-;           (flatten
-;             (to-list oldMat))))]
-;     (.reshape newMat 2 2)
-;     (matrix
-;       (.toArray
-;        (MatrixFunctions/expm newMat))
-;       3)))
+(defn gmm
+  ([points n]
+    (let
+      [xs       (map #(first (first %)) points)
+       ys       (map #(second (first %)) points)
+       x-coords (repeatedly n #(+ (apply min xs)
+                                  (* (rand) (- (apply max xs) (apply min xs)))))
+       y-coords (repeatedly n #(+ (apply min ys)
+                                  (* (rand) (- (apply max ys) (apply min ys)))))
+       means    (map #(vector (vector %1 %2)) x-coords y-coords)
+       covars   (repeat n (matrix [[1 0] [0 1]]))
+       coeffs   (repeat n 1)]
+      (gmm points means covars coeffs)))
+  ([points means covars coeffs]
+    (println means)
+    (let
+      [γ (expectation points means covars coeffs)
+       [new-means new-covars new-coeffs] (maximization points γ)]
+      (gmm points new-means new-covars new-coeffs))))
